@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: blood-bank-api
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node src/index.js
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        sync: false
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_ACCESS_EXPIRES
+        value: 15m
+      - key: JWT_REFRESH_EXPIRES
+        value: 7d
+      - key: CORS_ORIGINS
+        sync: false
+      - key: OTP_PROVIDER
+        value: log
+      - key: OTP_PROVIDER_KEY
+        sync: false
+      - key: SEED_DOCTOR_ID
+        sync: false
+      - key: SEED_DOCTOR_PIN
+        sync: false
+      - key: SEED_STAFF_ID
+        sync: false
+      - key: SEED_STAFF_PIN
+        sync: false
