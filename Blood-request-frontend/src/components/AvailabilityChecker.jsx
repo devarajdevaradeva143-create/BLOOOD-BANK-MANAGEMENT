@@ -4,7 +4,7 @@ import { toast } from 'react-hot-toast'
 import { useLanguage } from '../context/useLanguage'
 import { districts, getDistrictName } from '../data/districts'
 import { BLOOD_GROUPS, MAX_UNITS, MIN_UNITS } from '../data/constants'
-import { checkAvailability, getAvailableUnits } from '../data/mockAvailability'
+import { fetchAvailability } from '../lib/api.js'
 import FormField from './FormField'
 
 export default function AvailabilityChecker() {
@@ -43,7 +43,7 @@ export default function AvailabilityChecker() {
     setResult(null)
   }
 
-  const handleCheck = () => {
+  const handleCheck = async () => {
     const nextErrors = {}
 
     if (!districtId) nextErrors.districtId = t('err.district')
@@ -70,8 +70,8 @@ export default function AvailabilityChecker() {
     setChecking(true)
     setResult(null)
     setSuggestions([])
-    setTimeout(() => {
-      const r = checkAvailability(districtId, bloodGroup, requiredUnits)
+    try {
+      const r = await fetchAvailability(districtId, bloodGroup, requiredUnits)
       setResult({
         districtId,
         bloodGroup,
@@ -79,17 +79,29 @@ export default function AvailabilityChecker() {
         available: r.available,
         isAvailable: r.isAvailable,
       })
-      setChecking(false)
       if (!r.isAvailable) {
         toast.error(t('toast.notAvailable'))
-        const alts = districts
-          .filter((d) => d.id !== districtId)
-          .map((d) => ({ id: d.id, units: getAvailableUnits(d.id, bloodGroup) }))
-          .filter((x) => x.units >= requiredUnits)
+        const candidates = districts.filter((d) => d.id !== districtId)
+        const settled = await Promise.all(
+          candidates.map(async (d) => {
+            try {
+              const alt = await fetchAvailability(d.id, bloodGroup, requiredUnits)
+              return { id: d.id, units: alt.available }
+            } catch {
+              return null
+            }
+          }),
+        )
+        const alts = settled
+          .filter((x) => x && x.units >= requiredUnits)
           .slice(0, 3)
         setSuggestions(alts)
       }
-    }, 700)
+    } catch (err) {
+      toast.error(err?.message || 'Failed to check availability')
+    } finally {
+      setChecking(false)
+    }
   }
 
   const applySuggestion = (id) => {

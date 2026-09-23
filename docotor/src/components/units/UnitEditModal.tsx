@@ -64,6 +64,7 @@ export function UnitEditModal({ unit, open, onClose }: UnitEditModalProps) {
     collectionStaff: '',
   });
   const [errors, setErrors] = useState<Errors>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (unit && open) {
@@ -86,24 +87,32 @@ export function UnitEditModal({ unit, open, onClose }: UnitEditModalProps) {
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const validation = validate(form, t);
     setErrors(validation);
     if (Object.keys(validation).length > 0) return;
 
-    updateUnit(unit.id, {
-      bloodGroup: form.bloodGroup,
-      component: form.component,
-      district: form.district,
-      collectionDate: form.collectionDate,
-      expiryDate: form.expiryDate,
-      storageLocation: form.storageLocation,
-      quantity: Number(form.quantity),
-      collectionStaff: form.collectionStaff.trim(),
-    });
-    toast.success(t('edit.success', { id: unit.id }));
-    onClose();
+    setSaving(true);
+    try {
+      const updated = await updateUnit(unit.id, {
+        bloodGroup: form.bloodGroup,
+        component: form.component,
+        district: form.district,
+        collectionDate: form.collectionDate,
+        expiryDate: form.expiryDate,
+        storageLocation: form.storageLocation,
+        quantity: Number(form.quantity),
+        collectionStaff: form.collectionStaff.trim(),
+      });
+      if (!updated) throw new Error(t('common.error'));
+      toast.success(t('edit.success', { id: unit.id }));
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.error'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -115,10 +124,10 @@ export function UnitEditModal({ unit, open, onClose }: UnitEditModalProps) {
       size="lg"
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={saving}>
             {t('common.cancel')}
           </Button>
-          <Button type="submit" form="unit-edit-form">
+          <Button type="submit" form="unit-edit-form" loading={saving}>
             {t('common.save')}
           </Button>
         </>

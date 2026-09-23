@@ -13,6 +13,7 @@ import { Badge } from '../components/ui/Badge';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { StatusBadge, TestStatusBadge } from '../components/ui/StatusBadge';
+import { Spinner } from '../components/ui/Spinner';
 import { UnitFilters, emptyFilters } from '../components/units/UnitFilters';
 import type { UnitFiltersValue } from '../components/units/UnitFilters';
 import { UnitDetailModal } from '../components/units/UnitDetailModal';
@@ -22,7 +23,7 @@ import { StatusUpdateModal } from '../components/units/StatusUpdateModal';
 type ModalKind = 'view' | 'edit' | 'status' | null;
 
 export default function BloodUnitsPage() {
-  const { units } = useUnits();
+  const { units, loading, error } = useUnits();
   const { t, locale } = useI18n();
 
   const [filters, setFilters] = useState<UnitFiltersValue>({ ...emptyFilters });
@@ -131,12 +132,23 @@ export default function BloodUnitsPage() {
 
       <UnitFilters value={filters} onChange={setFilters} />
 
+      {error ? (
+        <p role="alert" className="mt-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600 dark:bg-rose-950/50 dark:text-rose-300">
+          {error}
+        </p>
+      ) : null}
+
       <p className="mt-4 text-xs font-medium text-slate-500 dark:text-slate-400">
         {t('units.showing', { count: filtered.length, total: units.length })}
       </p>
 
       <Card padded className="mt-3 overflow-hidden p-0">
-        {filtered.length === 0 ? (
+        {loading && units.length === 0 ? (
+          <div className="flex items-center justify-center gap-3 py-12 text-slate-500 dark:text-slate-400">
+            <Spinner />
+            <span className="text-sm">{t('common.loading')}</span>
+          </div>
+        ) : filtered.length === 0 ? (
           <EmptyState
             title={t('units.noResults')}
             hint={t('units.noResultsHint')}

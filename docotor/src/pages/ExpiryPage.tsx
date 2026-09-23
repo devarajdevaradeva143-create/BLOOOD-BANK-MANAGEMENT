@@ -9,6 +9,7 @@ import { daysRemaining, getEffectiveStatus, getExpiryStatus } from '../utils/exp
 import { formatDate } from '../utils/format';
 import { Card, CardHeader } from '../components/ui/Card';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Spinner } from '../components/ui/Spinner';
 import { Badge } from '../components/ui/Badge';
 import { ExpiryBadge, StatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -147,7 +148,7 @@ function Section({ icon, title, count, units, variant }: SectionProps) {
 }
 
 export default function ExpiryPage() {
-  const { units } = useUnits();
+  const { units, loading } = useUnits();
   const { t } = useI18n();
 
   const buckets = useMemo(() => {
@@ -175,6 +176,15 @@ export default function ExpiryPage() {
     <div>
       <PageHeader title={t('expiry.title')} subtitle={t('expiry.subtitle')} />
 
+      {loading && units.length === 0 ? (
+        <Card>
+          <div className="flex items-center justify-center gap-3 py-12 text-slate-500 dark:text-slate-400">
+            <Spinner />
+            <span className="text-sm">{t('common.loading')}</span>
+          </div>
+        </Card>
+      ) : (
+      <>
       <div className="mb-5 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/70 dark:bg-amber-950/40">
         <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
         <p className="text-sm leading-relaxed text-amber-900 dark:text-amber-200">
@@ -203,6 +213,8 @@ export default function ExpiryPage() {
           variant="safe"
         />
       </div>
+      </>
+      )}
     </div>
   );
 }

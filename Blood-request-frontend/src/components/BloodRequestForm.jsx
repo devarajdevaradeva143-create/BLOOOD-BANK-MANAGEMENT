@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   LoaderCircle,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import SectionCard from './SectionCard.jsx'
 import FormField from './FormField.jsx'
@@ -20,11 +20,14 @@ import {
   validateForm,
   validateField,
   todayISO,
-  generateRequestId,
 } from '../utils/validation.js'
 import { BLOOD_GROUPS, GENDERS, REQUEST_TYPES } from '../data/constants.js'
 import { districts } from '../data/districts.js'
-import { getAvailableUnits } from '../data/mockAvailability.js'
+import {
+  fetchAvailability,
+  requestOtp,
+  submitBloodRequest,
+} from '../lib/api.js'
 
 const INITIAL_VALUES = {
   patientName: '',
@@ -48,6 +51,37 @@ export default function BloodRequestForm() {
   const [formError, setFormError] = useState('')
   const [submittedRequest, setSubmittedRequest] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [otp, setOtp] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpError, setOtpError] = useState('')
+  const [avail, setAvail] = useState(null)
+  const [availLoading, setAvailLoading] = useState(false)
+
+  useEffect(() => {
+    if (!values.districtId || !values.bloodGroup) {
+      return
+    }
+    let cancelled = false
+    async function loadAvailability() {
+      setAvailLoading(true)
+      try {
+        const data = await fetchAvailability(
+          values.districtId,
+          values.bloodGroup,
+          values.units === '' ? undefined : values.units,
+        )
+        if (!cancelled) setAvail(data)
+      } catch {
+        if (!cancelled) setAvail(null)
+      } finally {
+        if (!cancelled) setAvailLoading(false)
+      }
+    }
+    loadAvailability()
+    return () => {
+      cancelled = true
+    }
+  }, [values.districtId, values.bloodGroup, values.units])
 
   function setField(name, value) {
     setValues((prev) => ({ ...prev, [name]: value }))
@@ -78,8 +112,7 @@ export default function BloodRequestForm() {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  function handleSubmit(e) {
-    e.preventDefault()
+  async function handleSendOtp() {
     const found = validateForm(values)
     if (Object.keys(found).length > 0) {
       setErrors(found)
@@ -89,22 +122,92 @@ export default function BloodRequestForm() {
     }
     setErrors({})
     setFormError('')
+    setOtpError('')
     setSubmitting(true)
-    setTimeout(() => {
-      setSubmittedRequest({
-        id: generateRequestId(),
+    try {
+      await requestOtp(String(values.contact).trim())
+      setOtpSent(true)
+      setOtp('')
+      toast.success(t('toast.requestSubmitted') !== 'toast.requestSubmitted' ? t('toast.requestSubmitted') : lang === 'ta' ? 'OTP அனுப்பப்பட்டது' : 'OTP sent to your mobile number')
+    } catch (err) {
+      const message = err?.message || 'Failed to send OTP'
+      setFormError(message)
+      toast.error(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleResendOtp() {
+    setOtpError('')
+    setSubmitting(true)
+    try {
+      await requestOtp(String(values.contact).trim())
+      toast.success(lang === 'ta' ? 'OTP மீண்டும் அனுப்பப்பட்டது' : 'OTP resent')
+    } catch (err) {
+      const message = err?.message || 'Failed to resend OTP'
+      setOtpError(message)
+      toast.error(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleVerifyAndSubmit() {
+    const code = String(otp).trim()
+    if (!/^\d{6}$/.test(code)) {
+      const msg = lang === 'ta' ? '6 இலக்க OTP-ஐ உள்ளிடவும்' : 'Enter the 6-digit OTP'
+      setOtpError(msg)
+      return
+    }
+    setOtpError('')
+    setFormError('')
+    setSubmitting(true)
+    try {
+      const payload = {
         patientName: String(values.patientName).trim(),
+        patientAge: Number(values.patientAge),
+        gender: values.gender,
         bloodGroup: values.bloodGroup,
         units: Number(values.units),
+        requiredDate: values.requiredDate,
+        reason: String(values.reason).trim(),
         districtId: values.districtId,
         hospitalName: String(values.hospitalName).trim(),
+        hospitalAddress: String(values.hospitalAddress).trim(),
+        contact: String(values.contact).trim(),
         requestType: values.requestType,
-        status: 'submitted',
+      }
+      const data = await submitBloodRequest(payload, code)
+      const r = data?.request
+      setSubmittedRequest({
+        id: r.requestId,
+        patientName: r.patientName,
+        bloodGroup: r.bloodGroup,
+        units: r.units,
+        districtId: r.districtId,
+        hospitalName: r.hospitalName,
+        requestType: r.requestType,
+        status: r.status || 'submitted',
       })
-      setSubmitting(false)
       window.scrollTo({ top: 0, behavior: 'smooth' })
       toast.success(t('toast.requestSubmitted'))
-    }, 900)
+    } catch (err) {
+      const message = err?.message || 'Failed to submit request'
+      setFormError(message)
+      toast.error(message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    if (!otpSent) {
+      handleSendOtp()
+    } else {
+      handleVerifyAndSubmit()
+    }
   }
 
   function handleNewRequest() {
@@ -112,6 +215,10 @@ export default function BloodRequestForm() {
     setErrors({})
     setFormError('')
     setSubmittedRequest(null)
+    setOtp('')
+    setOtpSent(false)
+    setOtpError('')
+    setAvail(null)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -123,15 +230,21 @@ export default function BloodRequestForm() {
 
   const showAvailability =
     Boolean(values.districtId) && Boolean(values.bloodGroup)
-  const availableUnits = showAvailability
-    ? getAvailableUnits(values.districtId, values.bloodGroup)
-    : 0
-  const requiredUnits = Number(values.units) || 0
-  const isEnough = availableUnits >= requiredUnits && availableUnits > 0
+  const availableUnits = avail?.available ?? 0
+  const isEnough = avail ? Boolean(avail.isAvailable) : false
 
   let availabilityBadge = null
   if (showAvailability) {
-    if (availableUnits === 0) {
+    if (availLoading) {
+      availabilityBadge = (
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          <LoaderCircle className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+          {t('avail.checking')}
+        </span>
+      )
+    } else if (!avail) {
+      availabilityBadge = null
+    } else if (availableUnits === 0) {
       availabilityBadge = (
         <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 dark:bg-red-950/60 dark:text-red-400">
           <Droplet className="h-3.5 w-3.5" aria-hidden="true" />
@@ -535,6 +648,52 @@ export default function BloodRequestForm() {
             errors={errors}
             onEditSection={scrollToSection}
           />
+          {otpSent && (
+            <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-700 dark:bg-slate-900/50">
+              <FormField
+                label={lang === 'ta' ? 'OTP (6 இலக்கம்)' : 'OTP (6-digit code)'}
+                htmlFor="otp"
+                required
+                error={otpError || undefined}
+                hint={
+                  lang === 'ta'
+                    ? `OTP ${values.contact} எண்ணுக்கு அனுப்பப்பட்டது`
+                    : `OTP sent to ${values.contact}`
+                }
+              >
+                <input
+                  id="otp"
+                  name="otp"
+                  type="text"
+                  maxLength={6}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  className={`input-base ${otpError ? 'input-error' : ''}`}
+                  placeholder={lang === 'ta' ? '6 இலக்க OTP' : 'Enter 6-digit OTP'}
+                  value={otp}
+                  onChange={(e) => {
+                    setOtp(e.target.value.replace(/\D/g, ''))
+                    if (otpError) setOtpError('')
+                  }}
+                />
+              </FormField>
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={submitting}
+                  className="btn-secondary w-full px-3 py-2 text-xs sm:w-auto"
+                >
+                  {lang === 'ta' ? 'OTP-ஐ மீண்டும் அனுப்பு' : 'Resend OTP'}
+                </button>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {lang === 'ta'
+                    ? 'OTP கிடைக்கவில்லையா? மீண்டும் அனுப்பவும்.'
+                    : "Didn't receive the OTP? Resend it."}
+                </span>
+              </div>
+            </div>
+          )}
           <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 dark:border-slate-700 sm:flex-row sm:items-center sm:justify-between">
             <span className="text-xs text-slate-500 dark:text-slate-400">
               {t('form.requiredNote')}

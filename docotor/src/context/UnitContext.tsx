@@ -1,72 +1,79 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { MOCK_UNITS } from '../data/mockUnits';
-import type { BloodUnit, HistoryEvent, NewUnitInput, TestResultInput, UnitStatus } from '../data/types';
+import type { BloodUnit, NewUnitInput, TestResultInput, UnitStatus } from '../data/types';
+import { createUnitApi, listUnits, recordTestApi, updateUnitStatusApi } from '../lib/api';
 import { getEffectiveStatus } from '../utils/expiry';
 
 interface UnitContextValue {
   units: BloodUnit[];
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
   getUnit: (id: string) => BloodUnit | undefined;
-  addUnit: (input: NewUnitInput) => BloodUnit;
-  updateUnit: (id: string, input: Partial<NewUnitInput>) => BloodUnit | undefined;
-  recordTest: (id: string, input: TestResultInput) => BloodUnit | undefined;
-  updateStatus: (id: string, status: UnitStatus, note?: string) => BloodUnit | undefined;
+  addUnit: (input: NewUnitInput) => Promise<BloodUnit>;
+  updateUnit: (id: string, input: Partial<NewUnitInput>) => Promise<BloodUnit | undefined>;
+  recordTest: (id: string, input: TestResultInput) => Promise<BloodUnit | undefined>;
+  updateStatus: (id: string, status: UnitStatus, note?: string) => Promise<BloodUnit | undefined>;
 }
 
 const UnitContext = createContext<UnitContextValue | null>(null);
 
-function makeEvent(type: HistoryEvent['type'], extra?: Partial<HistoryEvent>): HistoryEvent {
-  return {
-    id: `h-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    type,
-    at: new Date().toISOString(),
-    ...extra,
-  };
+function withEffectiveStatus(unit: BloodUnit): BloodUnit {
+  const effective = getEffectiveStatus(unit);
+  return effective === 'Expired' && unit.status !== 'Expired'
+    ? { ...unit, status: 'Expired' as UnitStatus }
+    : unit;
 }
 
 export function UnitProvider({ children }: { children: ReactNode }) {
-  const [units, setUnits] = useState<BloodUnit[]>(() =>
-    MOCK_UNITS.map((u) => {
-      const effective = getEffectiveStatus(u);
-      return effective === 'Expired' && u.status !== 'Expired' ? { ...u, status: 'Expired' as UnitStatus } : u;
-    }),
-  );
+  const [units, setUnits] = useState<BloodUnit[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await listUnits({ page: 1, limit: 100 });
+      setUnits(result.data.map(withEffectiveStatus));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load blood units');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const getUnit = useCallback((id: string) => units.find((u) => u.id === id), [units]);
 
-  const addUnit = useCallback((input: NewUnitInput) => {
-    const registered = makeEvent('registered');
-    const unit: BloodUnit = {
-      ...input,
-      testStatus: 'Pending',
-      status: 'UnderTesting',
-      updatedAt: registered.at,
-      history: [registered, makeEvent('testingStarted')],
-    };
-    setUnits((prev) => [unit, ...prev]);
-    return unit;
+  const addUnit = useCallback(async (input: NewUnitInput) => {
+    const { id, ...rest } = input;
+    const created = withEffectiveStatus(await createUnitApi({ unitCode: id, ...rest }));
+    setUnits((prev) => [created, ...prev]);
+    return created;
   }, []);
 
-  const updateUnit = useCallback((id: string, input: Partial<NewUnitInput>) => {
+  const updateUnit = useCallback(async (id: string, input: Partial<NewUnitInput>) => {
+    // The backend exposes no generic unit-update endpoint (only status/test
+    // transitions), so edits are applied to the local copy. They will be
+    // replaced by server data on the next refresh.
     let updated: BloodUnit | undefined;
+    const at = new Date().toISOString();
+    const { id: _ignoredId, ...fields } = input;
     setUnits((prev) =>
       prev.map((u) => {
         if (u.id !== id) return u;
-        const event = makeEvent('statusUpdated');
         updated = {
           ...u,
-          ...input,
-          // keep derived expiry status honest after date edits
-          status:
-            u.status === 'Expired'
-              ? input.expiryDate && new Date(input.expiryDate) >= new Date(new Date().toDateString())
-                ? u.testStatus === 'Passed'
-                  ? 'Available'
-                  : 'UnderTesting'
-                : 'Expired'
-              : u.status,
-          updatedAt: event.at,
-          history: [...u.history, event],
+          ...fields,
+          updatedAt: at,
+          history: [
+            ...u.history,
+            { id: `${u.id}-edit-${Date.now()}`, type: 'statusUpdated', at },
+          ],
         };
         return updated;
       }),
@@ -74,60 +81,21 @@ export function UnitProvider({ children }: { children: ReactNode }) {
     return updated;
   }, []);
 
-  const recordTest = useCallback((id: string, input: TestResultInput) => {
-    let updated: BloodUnit | undefined;
-    setUnits((prev) =>
-      prev.map((u) => {
-        if (u.id !== id) return u;
-        const history = [...u.history];
-        const testEvent = makeEvent('testCompleted', {
-          note: `${input.testStatus}${input.testedBy ? ` — ${input.testedBy}` : ''}`,
-        });
-        history.push(testEvent);
-
-        const effective = getEffectiveStatus({ ...u, expiryDate: u.expiryDate });
-        let nextStatus: UnitStatus;
-        if (input.testStatus === 'Failed') nextStatus = 'Discarded';
-        else if (input.testStatus === 'Passed') nextStatus = effective === 'Expired' ? 'Expired' : 'Available';
-        else nextStatus = 'UnderTesting';
-
-        if (nextStatus !== u.status) {
-          history.push(makeEvent('statusUpdated', { status: nextStatus }));
-        }
-
-        updated = {
-          ...u,
-          testStatus: input.testStatus,
-          screeningResult: input.screeningResult,
-          testedBy: input.testedBy,
-          testDate: input.testDate,
-          remarks: input.remarks ?? u.remarks,
-          status: nextStatus,
-          updatedAt: testEvent.at,
-          history,
-        };
-        return updated;
-      }),
-    );
+  const recordTest = useCallback(async (id: string, input: TestResultInput) => {
+    const updated = withEffectiveStatus(await recordTestApi(id, input));
+    setUnits((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
     return updated;
   }, []);
 
-  const updateStatus = useCallback((id: string, status: UnitStatus, note?: string) => {
-    let updated: BloodUnit | undefined;
-    setUnits((prev) =>
-      prev.map((u) => {
-        if (u.id !== id) return u;
-        const event = makeEvent('statusUpdated', { status, note });
-        updated = { ...u, status, updatedAt: event.at, history: [...u.history, event] };
-        return updated;
-      }),
-    );
+  const updateStatus = useCallback(async (id: string, status: UnitStatus, note?: string) => {
+    const updated = withEffectiveStatus(await updateUnitStatusApi(id, status, note));
+    setUnits((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
     return updated;
   }, []);
 
   const value = useMemo(
-    () => ({ units, getUnit, addUnit, updateUnit, recordTest, updateStatus }),
-    [units, getUnit, addUnit, updateUnit, recordTest, updateStatus],
+    () => ({ units, loading, error, refresh, getUnit, addUnit, updateUnit, recordTest, updateStatus }),
+    [units, loading, error, refresh, getUnit, addUnit, updateUnit, recordTest, updateStatus],
   );
 
   return <UnitContext.Provider value={value}>{children}</UnitContext.Provider>;

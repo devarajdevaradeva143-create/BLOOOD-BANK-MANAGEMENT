@@ -8,6 +8,7 @@ import { getEffectiveStatus, getExpiryStatus } from '../utils/expiry';
 import { formatDate, formatDateTime, relativeTime } from '../utils/format';
 import { Card, CardHeader } from '../components/ui/Card';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Spinner } from '../components/ui/Spinner';
 import { Badge } from '../components/ui/Badge';
 import { ExpiryBadge, StatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -92,7 +93,7 @@ function EventNode({ event }: { event: HistoryEvent }) {
 }
 
 export default function HistoryPage() {
-  const { units, getUnit } = useUnits();
+  const { units, loading, getUnit } = useUnits();
   const { t, locale } = useI18n();
   const [selectedId, setSelectedId] = useState('');
 
@@ -113,6 +114,15 @@ export default function HistoryPage() {
     <div>
       <PageHeader title={t('history.title')} subtitle={t('history.subtitle')} />
 
+      {loading && units.length === 0 ? (
+        <Card>
+          <div className="flex items-center justify-center gap-3 py-12 text-slate-500 dark:text-slate-400">
+            <Spinner />
+            <span className="text-sm">{t('common.loading')}</span>
+          </div>
+        </Card>
+      ) : (
+      <>
       <div className="mb-5 max-w-xs">
         <Field label={t('history.filterUnit')} htmlFor="historyUnitFilter">
           <Select
@@ -222,6 +232,8 @@ export default function HistoryPage() {
             </ul>
           )}
         </Card>
+      )}
+      </>
       )}
     </div>
   );

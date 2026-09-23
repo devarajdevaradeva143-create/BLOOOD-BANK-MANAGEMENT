@@ -91,9 +91,3 @@ export function todayISO() {
   const day = String(d.getDate()).padStart(2, '0')
   return `${d.getFullYear()}-${month}-${day}`
 }
-
-export function generateRequestId() {
-  const year = new Date().getFullYear()
-  const rand = Math.floor(100000 + Math.random() * 900000)
-  return `BR-${year}-${rand}`
-}

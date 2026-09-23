@@ -44,7 +44,7 @@ function defaultForm(): FormState {
 
 export default function AddUnitPage() {
   const { t } = useI18n();
-  const { addUnit, units } = useUnits();
+  const { addUnit } = useUnits();
   const navigate = useNavigate();
 
   const [form, setForm] = useState<FormState>(defaultForm);
@@ -86,8 +86,6 @@ export default function AddUnitPage() {
 
     if (!form.unitId.trim()) e.unitId = t('validation.required');
     else if (!UNIT_ID_PATTERN.test(form.unitId.trim())) e.unitId = t('validation.invalidId');
-    else if (units.some((u) => u.id.toLowerCase() === form.unitId.trim().toLowerCase()))
-      e.unitId = t('validation.idExists', { id: form.unitId.trim() });
 
     if (!form.bloodGroup) e.bloodGroup = t('validation.required');
     if (!form.component) e.component = t('validation.required');
@@ -108,7 +106,7 @@ export default function AddUnitPage() {
     return e;
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const errs = validate();
     setErrors(errs);
@@ -118,8 +116,8 @@ export default function AddUnitPage() {
     }
 
     setSaving(true);
-    window.setTimeout(() => {
-      const unit = addUnit({
+    try {
+      const unit = await addUnit({
         id: form.unitId.trim(),
         bloodGroup: form.bloodGroup,
         component: form.component,
@@ -130,10 +128,18 @@ export default function AddUnitPage() {
         quantity: Number(form.quantity),
         collectionStaff: form.collectionStaff.trim(),
       });
-      setSaving(false);
       toast.success(t('add.success', { id: unit.id }));
       navigate('/units');
-    }, 400);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : t('common.error');
+      setErrors({ unitId: message });
+      toast.error(message);
+      window.requestAnimationFrame(() => {
+        document.getElementById('unitId')?.focus();
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {

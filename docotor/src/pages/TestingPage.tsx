@@ -9,6 +9,7 @@ import { daysRemaining } from '../utils/expiry';
 import { formatDate, todayISO } from '../utils/format';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Card } from '../components/ui/Card';
+import { Spinner } from '../components/ui/Spinner';
 import { Badge } from '../components/ui/Badge';
 import { StatusBadge, TestStatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -58,10 +59,14 @@ function TestResultForm({ unit }: { unit: BloodUnit }) {
       testDate,
       remarks: remarks.trim() || undefined,
     };
-    await new Promise((resolve) => window.setTimeout(resolve, 350));
-    recordTest(unit.id, input);
-    toast.success(t('test.success', { id: unit.id }));
-    setLoading(false);
+    try {
+      await recordTest(unit.id, input);
+      toast.success(t('test.success', { id: unit.id }));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.error'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -261,7 +266,7 @@ function UnitRow({ unit }: { unit: BloodUnit }) {
 
 export default function TestingPage() {
   const { t } = useI18n();
-  const { units } = useUnits();
+  const { units, loading, error } = useUnits();
   const [filter, setFilter] = useState<Filter>('All');
 
   const visible = useMemo(() => {
@@ -269,9 +274,29 @@ export default function TestingPage() {
     return [...filtered].sort((a, b) => Number(b.testStatus === 'Pending') - Number(a.testStatus === 'Pending'));
   }, [units, filter]);
 
+  if (loading && units.length === 0) {
+    return (
+      <div>
+        <PageHeader title={t('test.title')} subtitle={t('test.subtitle')} />
+        <Card>
+          <div className="flex items-center justify-center gap-3 py-12 text-slate-500 dark:text-slate-400">
+            <Spinner />
+            <span className="text-sm">{t('common.loading')}</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div>
       <PageHeader title={t('test.title')} subtitle={t('test.subtitle')} />
+
+      {error ? (
+        <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600 dark:bg-rose-950/50 dark:text-rose-300">
+          {error}
+        </p>
+      ) : null}
 
       <div className="mb-4 inline-flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 dark:border-slate-800 dark:bg-slate-900">
         {FILTERS.map((f) => {

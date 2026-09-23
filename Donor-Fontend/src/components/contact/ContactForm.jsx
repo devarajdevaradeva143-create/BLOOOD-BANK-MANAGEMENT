@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send } from "lucide-react";
 import Input from "../ui/Input";
 import Select from "../ui/Select";
 import Button from "../ui/Button";
@@ -49,7 +49,6 @@ function validate(data, t) {
 export default function ContactForm() {
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const formRef = useRef(null);
   const toastCtx = useToast();
   const toast = toastCtx.toast ?? toastCtx;
@@ -79,13 +78,10 @@ export default function ContactForm() {
       return;
     }
 
-    setIsSubmitting(true);
-    window.setTimeout(() => {
-      setIsSubmitting(false);
-      setFormData(EMPTY_FORM);
-      toast.success(t("contact.toast.sent"));
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 600);
+    setFormData(EMPTY_FORM);
+    setErrors({});
+    toast.success(t("contact.toast.sent"));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -186,18 +182,9 @@ export default function ContactForm() {
         <p className="text-xs text-gray-500 dark:text-slate-500">
           {t("contact.form.requiredNote")}
         </p>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {t("contact.form.sending")}
-            </>
-          ) : (
-            <>
-              <Send className="h-4 w-4" />
-              {t("contact.form.send")}
-            </>
-          )}
+        <Button type="submit">
+          <Send className="h-4 w-4" />
+          {t("contact.form.send")}
         </Button>
       </div>
     </form>

@@ -25,6 +25,7 @@ export function StatusUpdateModal({ unit, open, onClose }: StatusUpdateModalProp
   const [target, setTarget] = useState<UnitStatus>('Available');
   const [note, setNote] = useState('');
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (unit && open) {
@@ -36,12 +37,19 @@ export function StatusUpdateModal({ unit, open, onClose }: StatusUpdateModalProp
 
   if (!unit) return null;
 
-  const apply = (status: UnitStatus) => {
-    updateStatus(unit.id, status, note.trim() || undefined);
-    toast.success(
-      t('statusModal.success', { id: unit.id, status: t(`status.${status}` as TranslationKey) }),
-    );
-    onClose();
+  const apply = async (status: UnitStatus) => {
+    setSaving(true);
+    try {
+      await updateStatus(unit.id, status, note.trim() || undefined);
+      toast.success(
+        t('statusModal.success', { id: unit.id, status: t(`status.${status}` as TranslationKey) }),
+      );
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.error'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSave = () => {
@@ -99,10 +107,10 @@ export function StatusUpdateModal({ unit, open, onClose }: StatusUpdateModalProp
         size="md"
         footer={
           <>
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={saving}>
               {t('common.cancel')}
             </Button>
-            <Button onClick={handleSave}>{t('statusModal.save')}</Button>
+            <Button onClick={handleSave} loading={saving}>{t('statusModal.save')}</Button>
           </>
         }
       >

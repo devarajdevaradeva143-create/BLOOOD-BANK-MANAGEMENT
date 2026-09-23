@@ -3,6 +3,10 @@ import { z } from 'zod';
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
 export const unitCreateSchema = z.object({
+  unitCode: z
+    .string()
+    .regex(/^BU-[A-Za-z0-9-]{2,20}$/, 'Invalid unit code (e.g. BU-101)')
+    .optional(),
   bloodGroup: z.enum(BLOOD_GROUPS),
   component: z.enum(['wholeBlood', 'prbc', 'ffp', 'platelets', 'cryo']),
   district: z.string().min(1, 'district is required'),

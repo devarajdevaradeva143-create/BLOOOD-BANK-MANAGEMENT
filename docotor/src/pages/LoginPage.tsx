@@ -23,7 +23,7 @@ export default function LoginPage() {
 
   if (user) return <Navigate to="/dashboard" replace />;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!staffId.trim() || !pin.trim()) {
@@ -31,22 +31,19 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    window.setTimeout(() => {
-      const ok = login(staffId, pin, remember);
-      setLoading(false);
+    try {
+      const ok = await login(staffId, pin, remember);
       if (ok) {
         toast.success(t('login.title'));
         navigate('/dashboard', { replace: true });
       } else {
         setError(t('login.errorInvalid'));
       }
-    }, 600);
-  };
-
-  const fillDemo = (id: string, password: string) => {
-    setStaffId(id);
-    setPin(password);
-    setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('login.errorInvalid'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -190,35 +187,6 @@ export default function LoginPage() {
                 {loading ? t('login.signingIn') : t('login.submit')}
               </Button>
             </form>
-
-            <div className="mt-6 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/50">
-              <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">{t('login.demoTitle')}</p>
-              <div className="mt-3 space-y-2">
-                {[
-                  { id: 'DOC-1001', pin: '1234', label: t('login.demoDoctor') },
-                  { id: 'STAFF-2001', pin: '5678', label: t('login.demoStaff') },
-                ].map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 dark:bg-slate-900"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{c.label}</p>
-                      <p className="truncate font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">
-                        {c.id} / {c.pin}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => fillDemo(c.id, c.pin)}
-                      className="shrink-0 rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600 hover:bg-red-100 dark:bg-red-950/60 dark:text-red-300 dark:hover:bg-red-950"
-                    >
-                      {t('login.demoUse')}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
 
           <p className="mt-6 text-center text-[11px] text-slate-400 dark:text-slate-600">

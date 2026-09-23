@@ -9,6 +9,7 @@ import { getEffectiveStatus, isExpiringSoon } from '../utils/expiry';
 import { relativeTime } from '../utils/format';
 import { Card, CardHeader } from '../components/ui/Card';
 import { PageHeader } from '../components/ui/PageHeader';
+import { Spinner } from '../components/ui/Spinner';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
 
@@ -27,7 +28,7 @@ interface StatCard {
 }
 
 export default function DashboardPage() {
-  const { units } = useUnits();
+  const { units, loading } = useUnits();
   const { t, locale } = useI18n();
 
   const stats = useMemo<StatCard[]>(() => {
@@ -95,6 +96,13 @@ export default function DashboardPage() {
     <div>
       <PageHeader title={t('dash.title')} subtitle={t('dash.subtitle')} />
 
+      {loading && units.length === 0 ? (
+        <div className="flex items-center justify-center gap-3 py-16 text-slate-500 dark:text-slate-400">
+          <Spinner />
+          <span className="text-sm">{t('common.loading')}</span>
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {stats.map((stat) => {
           const Icon = stat.icon;
@@ -178,6 +186,8 @@ export default function DashboardPage() {
           </ul>
         )}
       </Card>
+      </>
+      )}
     </div>
   );
 }
