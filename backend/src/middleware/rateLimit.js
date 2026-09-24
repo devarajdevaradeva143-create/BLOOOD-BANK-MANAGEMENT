@@ -24,4 +24,12 @@ export const otpLimiter = rateLimit({
   message: { message: 'Too many OTP requests, try again later' },
 });
 
+export const chatLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { message: 'Too many chat requests, try again later' },
+});
+
 export default globalLimiter;

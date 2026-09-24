@@ -7,6 +7,7 @@ import process from "./process";
 import benefits from "./benefits";
 import faq from "./faq";
 import contact from "./contact";
+import chat from "./chat";
 
 export default {
   core,
@@ -18,4 +19,5 @@ export default {
   benefits,
   faq,
   contact,
+  chat,
 };

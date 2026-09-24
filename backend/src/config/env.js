@@ -41,6 +41,12 @@ export const config = {
 
   pepper: process.env.PIN_PEPPER || process.env.PEPPER || '',
 
+  chat: {
+    apiKey: process.env.OPENAI_API_KEY || '',
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    maxTokens: Number(process.env.CHAT_MAX_TOKENS || 500),
+  },
+
   seed: {
     doctorId: process.env.SEED_DOCTOR_ID || 'DOC-001',
     doctorPin: process.env.SEED_DOCTOR_PIN || '1234',
