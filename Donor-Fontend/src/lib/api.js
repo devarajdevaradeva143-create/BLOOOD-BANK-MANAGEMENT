@@ -57,3 +57,7 @@ export function registerDonor(payload, code) {
     body: { ...payload, code: String(code).trim() },
   });
 }
+
+export function fetchStats() {
+  return req("/api/stats");
+}

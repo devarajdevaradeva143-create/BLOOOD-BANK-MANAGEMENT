@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { HOME_STATS } from "../../data/constants";
+import { fetchStats } from "../../lib/api.js";
 import useCountUp from "./useCountUp";
 import { useLanguage } from "../../i18n/LanguageContext";
 
@@ -22,8 +24,56 @@ function StatCard({ id, value, suffix }) {
   );
 }
 
+function fallbackValue(id) {
+  const found = HOME_STATS.find((s) => s.id === id);
+  return found ? found.value : 0;
+}
+
 export default function StatsCounter() {
   const { t } = useLanguage();
+  const [live, setLive] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchStats()
+      .then((data) => {
+        if (!cancelled) setLive(data);
+      })
+      .catch(() => {
+        if (!cancelled) setLive(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const stats = [
+    {
+      id: "donors",
+      value:
+        live && Number.isFinite(Number(live.donors))
+          ? Number(live.donors)
+          : fallbackValue("donors"),
+      suffix: "+",
+    },
+    {
+      id: "lives",
+      value:
+        live && Number.isFinite(Number(live.livesSupported))
+          ? Number(live.livesSupported)
+          : fallbackValue("lives"),
+      suffix: "+",
+    },
+    {
+      id: "available",
+      value:
+        live && Number.isFinite(Number(live.availableUnits))
+          ? Number(live.availableUnits)
+          : 0,
+      suffix: "",
+    },
+  ];
+
   return (
     <section className="bg-gray-50 py-16 dark:bg-slate-950 md:py-24">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -38,7 +88,7 @@ export default function StatsCounter() {
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
-          {HOME_STATS.map((stat, index) => (
+          {stats.map((stat, index) => (
             <div
               key={stat.id}
               className="animate-slide-up"

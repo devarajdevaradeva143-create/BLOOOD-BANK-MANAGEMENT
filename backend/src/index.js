@@ -14,6 +14,7 @@ import donorRoutes from './routes/donors.routes.js';
 import requestRoutes from './routes/requests.routes.js';
 import unitsRoutes from './routes/units.routes.js';
 import availabilityRoutes from './routes/availability.routes.js';
+import statsRoutes from './routes/stats.routes.js';
 
 const app = express();
 
@@ -51,6 +52,7 @@ app.use('/api/donors', donorRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/units', unitsRoutes);
 app.use('/api/availability', availabilityRoutes);
+app.use('/api/stats', statsRoutes);
 
 // --- 404 + error handler (must be last) ---
 app.use(notFound);

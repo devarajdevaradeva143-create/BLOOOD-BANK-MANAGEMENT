@@ -60,6 +60,10 @@ export default {
     en: "Blood Donation Camps",
     ta: "இரத்ததான முகாம்கள்",
   },
+  "home.stat.available": {
+    en: "Units Available Now",
+    ta: "தற்போது கிடைக்கும் அலகுகள்",
+  },
 
   "home.why.title": {
     en: "Why Donate Blood?",
