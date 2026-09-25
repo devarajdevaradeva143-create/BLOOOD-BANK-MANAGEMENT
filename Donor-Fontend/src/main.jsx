@@ -5,6 +5,7 @@ import "./index.css";
 import App from "./App.jsx";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
+import { DonorAuthProvider } from "./context/DonorAuthContext";
 import { LanguageProvider } from "./i18n/LanguageContext";
 
 createRoot(document.getElementById("root")).render(
@@ -12,9 +13,11 @@ createRoot(document.getElementById("root")).render(
     <LanguageProvider>
       <ThemeProvider>
         <ToastProvider>
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <DonorAuthProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </DonorAuthProvider>
         </ToastProvider>
       </ThemeProvider>
     </LanguageProvider>

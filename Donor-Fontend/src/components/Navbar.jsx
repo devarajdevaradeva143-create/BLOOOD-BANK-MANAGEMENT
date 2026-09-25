@@ -1,15 +1,24 @@
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { Droplet, Languages, Menu, Moon, Sun, X } from "lucide-react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Droplet, Languages, LogIn, LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { useDonorAuth } from "../context/DonorAuthContext";
 import { useLanguage } from "../i18n/LanguageContext";
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { lang, toggleLang, t } = useLanguage();
+  const { isAuthenticated, logout } = useDonorAuth();
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const closeMenu = () => setMenuOpen(false);
+
+  const handleLogout = () => {
+    logout();
+    closeMenu();
+    navigate("/login", { replace: true });
+  };
 
   const links = [
     { to: "/", label: t("nav.home") },
@@ -99,6 +108,25 @@ export default function Navbar() {
             {t("nav.donateNow")}
           </Link>
 
+          {isAuthenticated ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="hidden items-center justify-center gap-1.5 rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white md:inline-flex"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              {t("nav.logout")}
+            </button>
+          ) : (
+            <Link
+              to="/login"
+              className="hidden items-center justify-center gap-1.5 rounded-lg border border-brand-600 px-4 py-2 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:border-brand-500 dark:text-brand-400 dark:hover:bg-brand-600 dark:hover:text-white dark:focus-visible:ring-offset-slate-950 md:inline-flex"
+            >
+              <LogIn className="h-4 w-4" aria-hidden="true" />
+              {t("nav.login")}
+            </Link>
+          )}
+
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
@@ -135,10 +163,29 @@ export default function Navbar() {
             <Link
               to="/register"
               onClick={closeMenu}
-              className="mt-2 inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950 md:hidden"
+              className="mt-2 inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand-700 md:hidden"
             >
               {t("nav.donateNow")}
             </Link>
+            {isAuthenticated ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+              >
+                <LogOut className="h-4 w-4" aria-hidden="true" />
+                {t("nav.logout")}
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                onClick={closeMenu}
+                className="mt-2 inline-flex items-center justify-center gap-2 rounded-lg border border-brand-600 px-4 py-2.5 text-sm font-semibold text-brand-600 transition-colors hover:bg-brand-600 hover:text-white dark:border-brand-500 dark:text-brand-400 dark:hover:bg-brand-600 dark:hover:text-white"
+              >
+                <LogIn className="h-4 w-4" aria-hidden="true" />
+                {t("nav.login")}
+              </Link>
+            )}
           </nav>
         </div>
       )}

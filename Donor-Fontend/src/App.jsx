@@ -1,5 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import MainLayout from "./components/layout/MainLayout";
+import RequireAuth from "./components/auth/RequireAuth";
+import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import AboutPage from "./pages/AboutPage";
 import RegisterPage from "./pages/RegisterPage";
@@ -13,15 +15,18 @@ import NotFoundPage from "./pages/NotFoundPage";
 function App() {
   return (
     <Routes>
+      <Route path="login" element={<LoginPage />} />
+      <Route path="register" element={<RegisterPage />} />
       <Route element={<MainLayout />}>
-        <Route index element={<HomePage />} />
-        <Route path="about" element={<AboutPage />} />
-        <Route path="register" element={<RegisterPage />} />
-        <Route path="eligibility" element={<EligibilityPage />} />
-        <Route path="process" element={<ProcessPage />} />
-        <Route path="benefits" element={<BenefitsPage />} />
-        <Route path="faq" element={<FaqPage />} />
-        <Route path="contact" element={<ContactPage />} />
+        <Route element={<RequireAuth />}>
+          <Route index element={<HomePage />} />
+          <Route path="about" element={<AboutPage />} />
+          <Route path="eligibility" element={<EligibilityPage />} />
+          <Route path="process" element={<ProcessPage />} />
+          <Route path="benefits" element={<BenefitsPage />} />
+          <Route path="faq" element={<FaqPage />} />
+          <Route path="contact" element={<ContactPage />} />
+        </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
