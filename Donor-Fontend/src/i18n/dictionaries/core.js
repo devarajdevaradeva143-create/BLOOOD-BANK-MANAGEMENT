@@ -36,10 +36,9 @@ export default {
     en: "Mon – Sat: 8:00 AM – 8:00 PM  |  Emergency: 24/7",
     ta: "திங்கள் – சனி: காலை 8:00 – இரவு 8:00  |  அவசரம்: 24/7",
   },
-  "footer.quickLinks": { en: "Quick Links", ta: "விரைவு இணைப்புகள்" },
   "footer.copyright": {
-    en: "© 2026 Life Saver Blood Bank Management in Tamil Nadu. All rights reserved. | Frontend demo — no real data is stored.",
-    ta: "© 2026 Life Saver Blood Bank Management in Tamil Nadu. அனைத்து உரிமைகளும் இருக்கின்றன | முன்பக்க டெமோ — உண்மையான தரவு எதுவும் சேமிக்கப்படவில்லை.",
+    en: "© 2026 Life Saver Blood Bank Management in Tamil Nadu. All rights reserved.",
+    ta: "© 2026 Life Saver Blood Bank Management in Tamil Nadu. அனைத்து உரிமைகளும் இருக்கின்றன.",
   },
 
   "notfound.title": { en: "Page not found", ta: "பக்கம் கிடைக்கவில்லை" },

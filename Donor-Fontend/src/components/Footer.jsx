@@ -1,4 +1,3 @@
-import { Link } from "react-router-dom";
 import { Droplet, Mail, Phone } from "lucide-react";
 import { CONTACT_INFO } from "../data/constants";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -6,21 +5,10 @@ import { useLanguage } from "../i18n/LanguageContext";
 export default function Footer() {
   const { t } = useLanguage();
 
-  const quickLinks = [
-    { to: "/", label: t("nav.home") },
-    { to: "/about", label: t("nav.about") },
-    { to: "/register", label: t("nav.donate") },
-    { to: "/eligibility", label: t("nav.eligibility") },
-    { to: "/process", label: t("nav.process") },
-    { to: "/benefits", label: t("nav.benefits") },
-    { to: "/faq", label: t("nav.faq") },
-    { to: "/contact", label: t("nav.contact") },
-  ];
-
   return (
     <footer className="bg-slate-950 text-slate-300">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
           <div>
             <div className="flex items-center gap-2.5">
               <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600">
@@ -74,24 +62,6 @@ export default function Footer() {
             <p className="mt-2 text-xs leading-relaxed text-slate-500">
               {CONTACT_INFO.address}
             </p>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-white">
-              {t("footer.quickLinks")}
-            </h3>
-            <ul className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 text-sm lg:grid-cols-1 lg:gap-y-2">
-              {quickLinks.map((link) => (
-                <li key={link.to}>
-                  <Link
-                    to={link.to}
-                    className="text-slate-400 transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 rounded"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
 
